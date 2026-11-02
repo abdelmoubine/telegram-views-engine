@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Advanced Views Engine</title>
+    <style>
+        :root {
+            --primary: #2481cc;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+            --accent: #38bdf8;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .container {
+            width: 100%;
+            max-width: 550px;
+            background: var(--card);
+            padding: 35px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            border: 1px solid #334155;
+        }
+        h1 { color: var(--accent); font-size: 26px; margin: 0 0 5px 0; }
+        p { color: #94a3b8; font-size: 14px; margin-bottom: 25px; }
+        .form-group { text-align: left; margin-bottom: 20px; }
+        label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #cbd5e1; }
+        input { width: 100%; padding: 12px 14px; background: #0f172a; border: 1px solid #475569; border-radius: 6px; color: #fff; font-size: 15px; box-sizing: border-box; }
+        input:focus { border-color: var(--accent); outline: none; }
+        .metrics { display: flex; gap: 10px; margin: 20px 0; }
+        .metric-box { flex: 1; background: #0f172a; padding: 12px; border-radius: 6px; text-align: center; border: 1px solid #334155; }
+        .metric-box div { font-size: 22px; font-weight: bold; color: var(--accent); }
+        .metric-box span { font-size: 11px; color: #64748b; text-transform: uppercase; }
+        button { width: 100%; background: var(--primary); color: white; border: none; padding: 14px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #1d6fa5; }
+        button:disabled { background: #475569; cursor: not-allowed; }
+        .terminal { margin-top: 25px; background: #000; border: 1px solid #334155; border-radius: 6px; padding: 15px; height: 150px; overflow-y: auto; font-family: monospace; font-size: 12px; text-align: left; color: #4ade80; }
+        .line { margin-bottom: 4px; }
+        .err { color: #f87171; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Telegram Views Engine</h1>
+    <p>Server-side proxy deployment. Enter full post URL and required quantity.</p>
+    
+    <div class="form-group">
+        <label>PASTE TELEGRAM POST LINK</label>
+        <input type="text" id="targetLink" placeholder="https://t.me">
+    </div>
+
+    <div class="form-group">
+        <label>TARGET VIEWS QUANTITY</label>
+        <input type="number" id="targetQuantity" placeholder="e.g., 100" min="1" value="10">
+    </div>
+
+    <div class="metrics">
+        <div class="metric-box">
+            <div id="m-total">0</div>
+            <span>Target Goal</span>
+        </div>
+        <div class="metric-box">
+            <div id="m-ok" style="color: #4ade80;">0</div>
+            <span>Successful</span>
+        </div>
+        <div class="metric-box">
+            <div id="m-fail" style="color: #f87171;">0</div>
+            <span>Failed</span>
+        </div>
+    </div>
+
+    <button id="trigger" onclick="runEngine()">Execute Live Connection</button>
+    
+    <div class="terminal" id="termOutput">> Engine standby. Enter details to boot...</div>
+</div>
+
+<script>
+    let active = false;
+
+    function outLog(msg, isErr = false) {
+        const term = document.getElementById('termOutput');
+        if(term.innerText.includes("Engine standby")) term.innerHTML = "";
+        const time = new Date().toLocaleTimeString();
+        term.innerHTML += `<div class="line ${isErr ? 'err' : ''}">[${time}] ${msg}</div>`;
+        term.scrollTop = term.scrollHeight;
+    }
+
+    async function runEngine() {
+        if(active) return;
+        
+        const urlInput = document.getElementById('targetLink').value.trim();
+        const quantityInput = document.getElementById('targetQuantity').value.trim();
+        const parser = /t\.me\/([a-zA-Z0-9_]+)\/(\d+)/;
+        const parsed = urlInput.match(parser);
+
+        if(!parsed) {
+            alert("Invalid Link! Format must be: https://t.me");
+            return;
+        }
+        
+        const targetGoal = parseInt(quantityInput);
+        if(isNaN(targetGoal) || targetGoal <= 0) {
+            alert("Please enter a valid number of views!");
+            return;
+        }
+
+        active = true;
+        const btn = document.getElementById('trigger');
+        btn.disabled = true;
+        btn.innerText = "Processing Backend Pipelines...";
+
+        document.getElementById('m-total').innerText = targetGoal;
+        document.getElementById('m-ok').innerText = "0";
+        document.getElementById('m-fail').innerText = "0";
+        document.getElementById('termOutput').innerHTML = "";
+
+        outLog(`Connecting to internal Serverless API...`);
+
+        try {
+            // إرسال البيانات المحددة بالكامل إلى خادم الـ API الخلفي المدمج في المشروع
+            const response = await fetch('/api/proxy-handler', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ channel: parsed[1], post: parsed[2], quantity: targetGoal })
+            });
+
+            const result = await response.json();
+            
+            if(result.status === 'success' && result.data) {
+                let okCount = 0;
+                let failCount = 0;
+
+                for(let report of result.data) {
+                    if(report.status === 'OK') {
+                        okCount++;
+                        document.getElementById('m-ok').innerText = okCount;
+                        outLog(`[Success] View verified from proxy node.`);
+                    } else {
+                        failCount++;
+                        document.getElementById('m-fail').innerText = failCount;
+                        outLog(`[Failed] Proxy node connection refused.`, true);
+                    }
+                    await new Promise(r => setTimeout(r, 100));
+                }
+            } else {
+                outLog("Engine Error: Backend API returned invalid response structural array.", true);
+            }
+        } catch (err) {
+            outLog("Fatal Error: Could not reach /api/proxy-handler. Make sure you are running a server environment.", true);
+        }
+
+        outLog("Operation cycle complete.", false);
+        btn.disabled = false;
+        btn.innerText = "Execute Live Connection";
+        active = false;
+    }
+</script>
+
+</body>
+</html>
